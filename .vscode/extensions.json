@@ -1,0 +1,13 @@
+{
+        "recommendations": [
+                "aaron-bond.better-comments",
+                "eamodio.gitlens",
+                "editorconfig.editorconfig",
+                "github.vscode-pull-request-github",
+                "ms-python.python",
+                "ms-vsliveshare.vsliveshare",
+                "tyriar.sort-lines",
+                "vscode-icons-team.vscode-icons",
+                "vscodevim.vim"
+        ]
+}

@@ -70,7 +70,7 @@ name = "click"
 version = "8.0.4"
 description = "Composable command line interface toolkit"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -629,7 +629,7 @@ pyupgrade = ["pyupgrade"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "dacc2288bbec88283022605ac13d7c76c7ca04a7bde5443d008c4e39186197ae"
+content-hash = "a6e718aafe7aab46eaabd05391f4818e6b417ef6d0e765b478e22f041ac856b0"
 
 [metadata.files]
 astroid = [

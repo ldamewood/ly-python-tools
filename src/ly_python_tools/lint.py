@@ -186,10 +186,12 @@ def main(files: Sequence[Path]):
         if config.include.search(file_.as_posix())
     ]
 
-    if len(found_files) > 0:
-        for linter in config:
-            click.echo(f"Running {linter.executable} ...")
-            linter.exec(*found_files)
-        click.echo("Linting ran successfully")
-    else:
+    if len(found_files) == 0:
         click.echo("No files to lint. Bootstrap-mode only.")
+        sys.exit(0)
+
+    for linter in config:
+        click.echo(f"Running {linter.executable} ...")
+        linter.exec(*found_files)
+
+    click.echo("Linting ran successfully")

@@ -29,7 +29,7 @@ pyright = ["pyright"]
 pyupgrade = ["pyupgrade"]
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.1.0"
+pytest = "^7.1.1"
 pre-commit = "^2.17.0"
 
 [tool.lint]

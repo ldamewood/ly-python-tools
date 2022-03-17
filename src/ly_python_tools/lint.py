@@ -156,9 +156,10 @@ class LinterExitNonZero(Exception):
 
 
 @click.command()
+@click.option("--bootstrap", is_flag=True, default=False, help="Bootstrap all of the linters")
 @click.argument("files", nargs=-1, type=click.Path(path_type=Path))
 @click.version_option()
-def main(files: Sequence[Path]):
+def main(bootstrap: bool, files: Sequence[Path]):
     try:
         config = LintConfiguration.get_config()
     except NoProjectFile as e:
@@ -167,16 +168,19 @@ def main(files: Sequence[Path]):
         )
         sys.exit(1)
 
-    for linter in config:
-        click.echo(f"Bootstrapping {linter.executable} ... ")
-        try:
-            ret = linter.bootstrap()
-            click.echo(ret)
-        except subprocess.CalledProcessError as e:
-            click.echo("Bootstrap failed. Echoing stdout and stderr...")
-            click.echo(e.stdout)
-            click.echo(e.stderr)
-            raise e
+    if bootstrap:
+        for linter in config:
+            click.echo(f"Bootstrapping {linter.executable} ... ")
+            try:
+                ret = linter.bootstrap()
+                click.echo(ret)
+            except subprocess.CalledProcessError as e:
+                click.echo("Bootstrap failed. Echoing stdout and stderr...")
+                click.echo(e.stdout)
+                click.echo(e.stderr)
+                raise e
+        click.echo("Bootstrapping finished successfully.")
+        sys.exit(0)
 
     # Recursively search directories provided on the command line.
     found_files = [

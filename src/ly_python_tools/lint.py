@@ -187,12 +187,16 @@ def main(bootstrap: bool, files: Sequence[Path]):
         file_
         for part in files
         for file_ in part.rglob("*")
-        if config.include.search(file_.as_posix())
+        if config.include.search(file_.as_posix()) and file_.is_file()
     ]
 
     if len(found_files) == 0:
-        click.echo("No files to lint. Bootstrap-mode only.")
+        click.echo("No files to lint.")
         sys.exit(0)
+    else:
+        click.echo("Linting the following files:")
+        for file_ in found_files:
+            click.echo(f"- {file_}")
 
     for linter in config:
         click.echo(f"Running {linter.executable} ...")

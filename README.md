@@ -62,7 +62,7 @@ poetry run lint --bootstrap
 Lint all of the python files in the `src` and `tests` directories.
 
 ```
-poetry run lint src tests
+poetry run lint src/ tests/
 ```
 
 Run autoupgrade
@@ -71,9 +71,31 @@ Run autoupgrade
 poetry run autoupgrade
 ```
 
-## CI config
+## Using in a project
+
+With poetry, install all linters
 
 ```
+poetry add --dev ly_python_tools@latest -E all
+poetry run lint --bootstrap
+```
+
+Add configuration to your `pyproject.toml`. For example,
+
+```toml
+[tool.autoupgrade.constraints]
+pytest = "<7.1.0"
+
+[tool.lint]
+include = '\.py$'
+flake8 = { run=false }
+pyupgrade = { options=["--py37-plus"] }
+pyright = { options=["--pythonversion", "3.7"] }
+```
+
+## CI config
+
+```yaml
 run: |  # Install step can fail due to network failures.
   poetry install
   poetry run lint --bootstrap

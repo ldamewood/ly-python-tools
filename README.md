@@ -71,26 +71,23 @@ Run autoupgrade
 poetry run autoupgrade
 ```
 
-## Using in a project
+## Using in a poetry project
 
-With poetry, install all linters
+Install and use the linters
 
 ```
+# Install all linters
 poetry add --dev ly_python_tools@latest -E all
+# Ensure all linters are available
 poetry run lint --bootstrap
+# Run the linters
+poetry run lint .
 ```
 
-Add configuration to your `pyproject.toml`. For example,
+Upgrade all dev-dependencies
 
-```toml
-[tool.autoupgrade.constraints]
-pytest = "<7.1.0"
-
-[tool.lint]
-include = '\.py$'
-flake8 = { run=false }
-pyupgrade = { options=["--py37-plus"] }
-pyright = { options=["--pythonversion", "3.7"] }
+```
+poetry run autoupgrade
 ```
 
 ## CI config

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field, replace
@@ -54,10 +55,10 @@ class Linter:
 
     def bootstrap(self) -> str:
         """Ensure the linter is available on the system."""
-        ret = subprocess.run(
-            ["type", self._executable.as_posix()], check=True, capture_output=True, text=True
-        )
-        return ret.stdout.strip()
+        which = shutil.which(self._executable.as_posix())
+        if not which:
+            raise LinterNotFound(self._executable.as_posix())
+        return which
 
     def update(self, config: Mapping[str, Any]) -> Linter:
         """Update the linter options."""
@@ -146,6 +147,10 @@ class NoProjectFile(Exception):
         self.search_paths = [path.as_posix() for path in search_paths]
 
 
+class LinterNotFound(Exception):
+    """Linter was not found on the path."""
+
+
 class LinterExitNonZero(Exception):
     """Linter exited with non-zero status."""
 
@@ -166,14 +171,7 @@ def main(bootstrap: bool, files: Sequence[Path]):
     if bootstrap:
         for linter in config.linters:
             click.echo(f"Bootstrapping {linter.executable} ... ")
-            try:
-                ret = linter.bootstrap()
-                click.echo(ret)
-            except subprocess.CalledProcessError as e:
-                click.echo("Bootstrap failed. Echoing stdout and stderr...")
-                click.echo(e.stdout)
-                click.echo(e.stderr)
-                raise e
+            click.echo(linter.bootstrap())
         click.echo("Bootstrapping finished successfully.")
         sys.exit(0)
 

@@ -205,7 +205,6 @@ def main(verbose: bool, bootstrap: bool, files: Sequence[Path]):
             found = linter.bootstrap()
             logger.debug(f"{linter.executable} is {found}")
         click.echo("Bootstrapping finished successfully.")
-        sys.exit(0)
 
     # Recursively search directories provided on the command line.
     found_files = [

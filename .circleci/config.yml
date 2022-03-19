@@ -73,6 +73,11 @@ jobs:
       - python/install-packages:
           pkg-manager: poetry
       - run:
+          name: Build wheel
+          command: poetry build -f wheel
+      - store_artifacts:
+          path: dist
+      - run:
           name: Publish to artifactory
           command: poetry publish -r leapyear-artifactory
 workflows:
@@ -80,32 +85,12 @@ workflows:
     jobs:
       - python/test:
           context: artifactory
-          name: "test-3.7"
           pkg-manager: poetry
           pre-install-steps:
             - setup-artifactory
-          version: "3.7"
-      - python/test:
-          context: artifactory
-          name: "test-3.8"
-          pkg-manager: poetry
-          pre-install-steps:
-            - setup-artifactory
-          version: "3.8"
-      - python/test:
-          context: artifactory
-          name: "test-3.9"
-          pkg-manager: poetry
-          pre-install-steps:
-            - setup-artifactory
-          version: "3.9"
-      - python/test:
-          context: artifactory
-          name: "test-3.10"
-          pkg-manager: poetry
-          pre-install-steps:
-            - setup-artifactory
-          version: "3.10"
+          matrix:
+            parameters:
+              version: ["3.7", "3.8", "3.9", "3.10"]
       - lint:
           context: artifactory
       - deploy:

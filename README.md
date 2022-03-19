@@ -49,7 +49,6 @@ Install the project.
 
 ```
 poetry install -E all -E flake8
-poetry run pre-commit install
 ```
 
 Bootstrap the linter. This will ensure all of the expected linters are
@@ -69,6 +68,20 @@ Run autoupgrade
 
 ```
 poetry run autoupgrade
+```
+
+## Contributing
+
+This is alpha quality. Contact the author(s) if you want to contribute.
+
+### Circle CI
+
+The pre-commit hooks use the CircleCI config validator. If you edit the CircleCI
+config, [install CircleCI cli locally](https://circleci.com/docs/2.0/local-cli/)
+so you can validate the config. If you don't have the cli installed, use
+
+```bash
+SKIP=circleci-validate git commit ...
 ```
 
 ## Using in a poetry project

@@ -24,6 +24,11 @@ repos:
       - id: editorconfig-checker
   - repo: local
     hooks:
+      - id: circleci-validate
+        name: circleci-validate
+        entry: circleci config validate
+        language: system
+        files: ^.circleci/config\.yml$
       - id: lint
         name: lint
         entry: poetry run lint

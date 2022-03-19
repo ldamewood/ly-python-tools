@@ -13,6 +13,7 @@ Lint files with a variety of linters.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -23,6 +24,8 @@ from typing import Any, ClassVar, Mapping, Pattern, Sequence
 
 import click
 import toml
+
+from .environ import environ
 
 logger = logging.getLogger(__name__)
 
@@ -78,24 +81,41 @@ class PyRightLinter(Linter):
     """
 
     _retries: ClassVar[int] = 3
+    _default_env_dir: ClassVar[Path] = (
+        Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "pyright"
+    )
+
+    @classmethod
+    def _config_dir(cls) -> Path:
+        return Path(os.getenv("PYRIGHT_PYTHON_ENV_DIR", cls._default_env_dir)).resolve()
 
     def bootstrap(self) -> str:
         """Ensure the linter is available on the system."""
         ret = super().bootstrap()
-        for i in range(self._retries):
-            try:
-                subprocess.run(
-                    [self._executable.as_posix(), "--version"], check=True, capture_output=True
-                )
-                return ret
-            except subprocess.CalledProcessError as e:
-                if i == self._retries - 1:
-                    raise
-                logger.debug(f"Caught {e!r}: Trying again...")
-                continue
-        raise LinterBootstrapFailure(
-            f"Could not install pyright successfully after {self._retries} attempts"
-        )
+        config_dir = self._config_dir().as_posix()
+        with environ(PYRIGHT_PYTHON_ENV_DIR=config_dir):
+            logger.debug(f'PYRIGHT_PYTHON_ENV_DIR is {os.environ["PYRIGHT_PYTHON_ENV_DIR"]}')
+            for i in range(self._retries):
+                try:
+                    subprocess.run(
+                        [self._executable.as_posix(), "--version"], check=True, capture_output=True
+                    )
+                    return ret
+                except subprocess.CalledProcessError as e:
+                    if i == self._retries - 1:
+                        raise
+                    logger.debug(f"Caught {e!r}: Trying again...")
+                    continue
+            raise LinterBootstrapFailure(
+                f"Could not install pyright successfully after {self._retries} attempts. "
+                f"Try removing {config_dir}."
+            )
+
+    def exec(self, *files: Path):
+        config_dir = self._config_dir().as_posix()
+        with environ(PYRIGHT_PYTHON_ENV_DIR=config_dir):
+            logger.debug(f'PYRIGHT_PYTHON_ENV_DIR is {os.environ["PYRIGHT_PYTHON_ENV_DIR"]}')
+            super().exec(*files)
 
 
 DEFAULT_LINTERS = {
@@ -159,9 +179,13 @@ class LinterExitNonZero(Exception):
 
 @click.command()
 @click.option("--bootstrap", is_flag=True, default=False, help="Bootstrap all of the linters")
+@click.option("--verbose", is_flag=True, default=False)
 @click.argument("files", nargs=-1, type=click.Path(path_type=Path))
 @click.version_option()
-def main(bootstrap: bool, files: Sequence[Path]):
+def main(verbose: bool, bootstrap: bool, files: Sequence[Path]):
+    if verbose:
+        logging.basicConfig()
+        logger.setLevel(logging.DEBUG)
     try:
         config = LintConfiguration.get_config()
     except NoProjectFile as e:
@@ -173,7 +197,8 @@ def main(bootstrap: bool, files: Sequence[Path]):
     if bootstrap:
         for linter in config.linters:
             click.echo(f"Bootstrapping {linter.executable} ... ")
-            click.echo(linter.bootstrap())
+            found = linter.bootstrap()
+            logger.debug(f"{linter.executable} is {found}")
         click.echo("Bootstrapping finished successfully.")
         sys.exit(0)
 

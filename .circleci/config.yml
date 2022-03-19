@@ -1,14 +1,8 @@
 version: "2.1"
 orbs:
   python: circleci/python@2.0.3
-jobs:
-  test:
-    executor: python/default
-    steps:
-      - checkout
-      - python/test:
-          pkg-manager: poetry
 workflows:
-  main:
-    jobs:
-      - test
+    example-workflow:
+      jobs:
+        - python/test:
+            pkg-manager: poetry

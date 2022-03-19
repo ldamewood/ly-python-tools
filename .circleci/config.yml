@@ -6,7 +6,9 @@ jobs:
     executor: python/default
     steps:
       - checkout
-      - run: poetry install
+      - python/install-packages:
+          pkg-manager: poetry
+          args: -E all
       - run: poetry run lint --bootstrap
       - run: poetry run lint
 workflows:

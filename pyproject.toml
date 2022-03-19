@@ -10,24 +10,19 @@ lint = "ly_python_tools.lint:main"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-black = { version = "^22.1.0", optional = true }
+black = "^22.1.0"
 click = "^8.0.4"
 flake8 = { version = "^4.0.1", optional = true }
-isort = { version = "^5.10.1", optional = true }
-prospector = {version = "^1.7.7", optional = true }
-pyright = { version = "^1.1.230", optional = true }
-pyupgrade = { version = "^2.31.1", optional = true }
-toml = "^0.10.2"
 flake8-print = {version = "^4.0.0", optional = true}
+isort = "^5.10.1"
+prospector = {version = "^1.7.7", optional = true }
+pyright = "^1.1.231"
+pyupgrade = "^2.31.1"
+toml = "^0.10.2"
 
 [tool.poetry.extras]
-all = ["black", "isort", "pyupgrade", "prospector", "pyright"]
-black = ["black"]
 flake8 = ["flake8", "flake8-print"]
-isort = ["isort"]
 prospector = ["prospector"]
-pyright = ["pyright"]
-pyupgrade = ["pyupgrade"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.1"

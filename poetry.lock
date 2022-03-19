@@ -39,7 +39,7 @@ name = "black"
 version = "22.1.0"
 description = "The uncompromising code formatter."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6.2"
 
 [package.dependencies]
@@ -191,7 +191,7 @@ name = "isort"
 version = "5.10.1"
 description = "A Python utility / library to sort Python imports."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6.1,<4.0"
 
 [package.extras]
@@ -221,7 +221,7 @@ name = "mypy-extensions"
 version = "0.4.3"
 description = "Experimental type system extensions for programs checked with the mypy typechecker."
 category = "main"
-optional = true
+optional = false
 python-versions = "*"
 
 [[package]]
@@ -248,7 +248,7 @@ name = "pathspec"
 version = "0.9.0"
 description = "Utility library for gitignore style pattern matching of file paths."
 category = "main"
-optional = true
+optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 
 [[package]]
@@ -461,7 +461,7 @@ name = "pyright"
 version = "1.1.231"
 description = "Command line wrapper for pyright"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -499,7 +499,7 @@ name = "pyupgrade"
 version = "2.31.1"
 description = "A tool to automatically upgrade syntax for newer versions."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -556,7 +556,7 @@ name = "tokenize-rt"
 version = "4.2.1"
 description = "A wrapper around the stdlib `tokenize` which roundtrips."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6.1"
 
 [[package]]
@@ -580,7 +580,7 @@ name = "typed-ast"
 version = "1.5.2"
 description = "a fork of Python 2 and 3 ast modules with type comment support"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [[package]]
@@ -631,18 +631,13 @@ docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
 testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-cov", "pytest-enabler (>=1.0.1)", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy"]
 
 [extras]
-all = ["black", "isort", "pyupgrade", "prospector", "pyright"]
-black = ["black"]
 flake8 = ["flake8", "flake8-print"]
-isort = ["isort"]
 prospector = ["prospector"]
-pyright = ["pyright"]
-pyupgrade = ["pyupgrade"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "0141d49d7ae6b49760e9780f9cb57870790e9a63feebb3b8ae6ae8209466ca91"
+content-hash = "2839fae197275667a36319be862d8e7fd31e8bd3c1bbeeb1b5fdfba289d6735a"
 
 [metadata.files]
 astroid = [

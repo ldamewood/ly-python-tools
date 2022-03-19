@@ -8,7 +8,8 @@ def test_environ():
     key = "__TEST_VAR__"
     value = "__TEST_VAR_VALUE__"
 
+    old_env = os.environ.copy()
     assert key not in os.environ
     with environ(**{key: value}):
         assert os.environ[key] == value
-    assert key not in os.environ
+    assert os.environ == old_env

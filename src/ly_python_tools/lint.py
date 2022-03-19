@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import logging
 import re
+import shutil
 import subprocess
 import sys
-from collections import UserList
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, ClassVar, Mapping, Pattern, Sequence
@@ -55,10 +55,10 @@ class Linter:
 
     def bootstrap(self) -> str:
         """Ensure the linter is available on the system."""
-        ret = subprocess.run(
-            ["type", self._executable.as_posix()], check=True, capture_output=True, text=True
-        )
-        return ret.stdout.strip()
+        which = shutil.which(self._executable.as_posix())
+        if not which:
+            raise LinterBootstrapFailure(f"Could not find {self._executable.as_posix()}")
+        return which
 
     def update(self, config: Mapping[str, Any]) -> Linter:
         """Update the linter options."""
@@ -90,10 +90,11 @@ class PyRightLinter(Linter):
             except subprocess.CalledProcessError as e:
                 if i == self._retries - 1:
                     raise
-                print(f"Caught {e!r}: Trying again...")
+                logger.debug(f"Caught {e!r}: Trying again...")
                 continue
-        print("Could not install pyright successfully after 3 attempts.")
-        sys.exit(1)
+        raise LinterBootstrapFailure(
+            f"Could not install pyright successfully after {self._retries} attempts"
+        )
 
 
 DEFAULT_LINTERS = {
@@ -107,17 +108,13 @@ DEFAULT_LINTERS = {
 
 
 @dataclass
-class LintConfiguration(UserList[Linter]):
+class LintConfiguration:
     """Configuration for running all of the linters."""
 
     name: str
+    linters: Sequence[Linter]
     include: Pattern[str]
     _config_file: ClassVar[Path] = Path("pyproject.toml")
-
-    def __init__(self, name: str, linters: Sequence[Linter], include: Pattern[str]):
-        super().__init__(linters)
-        self.name = name
-        self.include = include
 
     @classmethod
     def get_config(cls) -> LintConfiguration:
@@ -151,6 +148,10 @@ class NoProjectFile(Exception):
         self.search_paths = [path.as_posix() for path in search_paths]
 
 
+class LinterBootstrapFailure(Exception):
+    """Linter failed during bootstrap."""
+
+
 class LinterExitNonZero(Exception):
     """Linter exited with non-zero status."""
 
@@ -169,16 +170,9 @@ def main(bootstrap: bool, files: Sequence[Path]):
         sys.exit(1)
 
     if bootstrap:
-        for linter in config:
+        for linter in config.linters:
             click.echo(f"Bootstrapping {linter.executable} ... ")
-            try:
-                ret = linter.bootstrap()
-                click.echo(ret)
-            except subprocess.CalledProcessError as e:
-                click.echo("Bootstrap failed. Echoing stdout and stderr...")
-                click.echo(e.stdout)
-                click.echo(e.stderr)
-                raise e
+            click.echo(linter.bootstrap())
         click.echo("Bootstrapping finished successfully.")
         sys.exit(0)
 
@@ -186,7 +180,7 @@ def main(bootstrap: bool, files: Sequence[Path]):
     found_files = [
         file_
         for part in files
-        for file_ in part.rglob("*")
+        for file_ in (part.rglob("*") if part.is_dir() else [part])
         if config.include.search(file_.as_posix()) and file_.is_file()
     ]
 
@@ -198,7 +192,7 @@ def main(bootstrap: bool, files: Sequence[Path]):
         for file_ in found_files:
             click.echo(f"- {file_}")
 
-    for linter in config:
+    for linter in config.linters:
         click.echo(f"Running {linter.executable} ...")
         linter.exec(*found_files)
 

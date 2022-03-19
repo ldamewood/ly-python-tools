@@ -1,0 +1,7 @@
+- id: lint
+  name: lint
+  description: Run a number of python linters
+  entry: lint
+  language: python
+  types: [python]
+  require_serial: true

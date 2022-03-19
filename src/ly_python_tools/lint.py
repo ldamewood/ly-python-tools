@@ -223,8 +223,13 @@ def main(verbose: bool, bootstrap: bool, files: Sequence[Path]):
         for file_ in found_files:
             click.echo(f"- {file_}")
 
-    for linter in config.linters:
+    runnable_linters = [linter for linter in config.linters if linter.run]
+
+    for linter in runnable_linters:
         click.echo(f"Running {linter.executable} ...")
         linter.exec(*found_files)
+
+    if any(linter.mutable for linter in runnable_linters):
+        click.echo("Files may have been modified")
 
     click.echo("Linting ran successfully")

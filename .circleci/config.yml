@@ -4,11 +4,11 @@ orbs:
 commands:
   setup-artifactory:
     steps:
-      run:
-        name: Configure poetry to pull from artifactory
-        command: |
-          poetry config repositories.leapyear "$ARTIFACTORY_URL/api/pypi/leapyear-pypi-all/simple"
-          poetry config http-basic.leapyear "$ARTIFACTORY_USER" "$ARTIFACTORY_PASSWORD"
+      - run:
+          name: Configure poetry to pull from artifactory
+          command: |
+            poetry config repositories.leapyear "$ARTIFACTORY_URL/api/pypi/leapyear-pypi-all/simple"
+            poetry config http-basic.leapyear "$ARTIFACTORY_USER" "$ARTIFACTORY_PASSWORD"
 jobs:
   lint:
     executor: python/default
@@ -110,10 +110,10 @@ workflows:
           context: artifactory
   tag:
     jobs:
-      deploy:
-        context: artifactory
-        filters:
-          branches:
-            ignore: /.*/
-          tags:
-            only: /^v.*/
+      - deploy:
+          context: artifactory
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/

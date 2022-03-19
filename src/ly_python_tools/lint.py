@@ -181,7 +181,7 @@ def main(bootstrap: bool, files: Sequence[Path]):
     found_files = [
         file_
         for part in files
-        for file_ in part.rglob("*")
+        for file_ in (part.rglob("*") if part.is_dir() else [part])
         if config.include.search(file_.as_posix()) and file_.is_file()
     ]
 

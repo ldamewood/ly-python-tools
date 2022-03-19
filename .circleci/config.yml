@@ -1,33 +1,119 @@
 version: 2.1
 orbs:
   python: circleci/python@2.0.3
+commands:
+  setup-artifactory:
+    steps:
+      run:
+        name: Configure poetry to pull from artifactory
+        command: |
+          poetry config repositories.leapyear "$ARTIFACTORY_URL/api/pypi/leapyear-pypi-all/simple"
+          poetry config http-basic.leapyear "$ARTIFACTORY_USER" "$ARTIFACTORY_PASSWORD"
 jobs:
   lint:
     executor: python/default
     steps:
+      - setup-artifactory
       - checkout
       - python/install-packages:
           pkg-manager: poetry
           args: -E all
       - run: poetry run lint --bootstrap
       - run: poetry run lint .
+  deploy:
+    executor: python/default
+    steps:
+      - setup-artifactory
+      - checkout
+      - run:
+          name: Determine the maturity of the artifact based on context clues
+          command: |
+            ARTIFACTORY_MATURITY=scratch
+            if [[ -n "${CIRCLE_TAG:-}" ]]; then
+              # tagged versions are releases
+              ARTIFACTORY_MATURITY=release
+            elif [[ "${CIRCLE_BRANCH}" == main ]]; then
+              # untagged on main
+              ARTIFACTORY_MATURITY=snapshot
+            fi
+            echo "export ARTIFACTORY_MATURITY=\"${ARTIFACTORY_MATURITY}\"" >> $BASH_ENV
+      - run:
+          name: Determine the correct repo based on context clues
+          command: |
+            ARTIFACTORY_REPO=leapyear-bin-${ARTIFACTORY_MATURITY}-local
+            echo "export ARTIFACTORY_REPO=\"${ARTIFACTORY_REPO}\"" >> $BASH_ENV
+      - run:
+          name: Configure poetry to push to pypi
+          command: |
+            poetry config repositories.leapyear-artifactory ${ARTIFACTORY_URL}/api/pypi/leapyear-pypi-${ARTIFACTORY_MATURITY}-local
+            poetry config http-basic.leapyear-artifactory $ARTIFACTORY_USER $ARTIFACTORY_PASSWORD
+      - run:
+          name: Determine the version of the artifact
+          command: |
+            mkdir -p dist
+            if [[ -n "${CIRCLE_TAG:-}" ]]
+            then
+              # This is tagged, so construct the version from the tag and remove the "v"
+              ARTIFACTORY_VERSION="${CIRCLE_TAG//v}"
+              # Refuse to continue if the CIRCLE tag doesn't match the poetry config.
+              POETRY_VERSION="$(poetry version -s)"
+              if [[ "${POETRY_VERSION}" != "${ARTIFACTORY_VERSION}" ]]
+              then
+                echo "poetry version '${POETRY_VERSION}' does not match artifactory version '${ARTIFACTORY_VERSION}'"
+                exit 1
+              fi
+            else
+              # Not a tag and the version was not set in a previous job.
+              # Get the x.y.z part of the semver from the repo and drop everything else.
+              short_semver=$(poetry version -s | sed 's/^\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\).*/\1.\2.\3/g')
+              # Construct the version using CircleCI information
+              ARTIFACTORY_VERSION="${short_semver}+${CIRCLE_BUILD_NUM}.${CIRCLE_SHA1:0:7}"
+            fi
+            poetry version "${ARTIFACTORY_VERSION}"
+      - python/install-packages:
+          pkg-manager: poetry
+      - run:
+          name: Publish to artifactory
+          command: poetry publish -r leapyear-artifactory
 workflows:
   build:
     jobs:
       - python/test:
+          context: artifactory
           name: "test-3.7"
           pkg-manager: poetry
+          pre-install-steps:
+            - setup-artifactory
           version: "3.7"
       - python/test:
+          context: artifactory
           name: "test-3.8"
           pkg-manager: poetry
+          pre-install-steps:
+            - setup-artifactory
           version: "3.8"
       - python/test:
+          context: artifactory
           name: "test-3.9"
           pkg-manager: poetry
+          pre-install-steps:
+            - setup-artifactory
           version: "3.9"
       - python/test:
+          context: artifactory
           name: "test-3.10"
           pkg-manager: poetry
+          pre-install-steps:
+            - setup-artifactory
           version: "3.10"
-      - lint
+      - lint:
+          context: artifactory
+  tag:
+    jobs:
+      deploy:
+        context: artifactory
+        filters:
+          branches:
+            ignore: /.*/
+          tags:
+            only: /^v.*/

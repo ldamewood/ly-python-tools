@@ -15,5 +15,19 @@ workflows:
   build:
     jobs:
       - python/test:
+          name: "test-3.7"
           pkg-manager: poetry
+          version: "3.7"
+      - python/test:
+          name: "test-3.8"
+          pkg-manager: poetry
+          version: "3.8"
+      - python/test:
+          name: "test-3.9"
+          pkg-manager: poetry
+          version: "3.9"
+      - python/test:
+          name: "test-3.10"
+          pkg-manager: poetry
+          version: "3.10"
       - lint

@@ -1,8 +1,17 @@
-version: "2.1"
+version: 2.1
 orbs:
   python: circleci/python@2.0.3
+jobs:
+  lint:
+    executor: python/default
+    steps:
+      - checkout
+      - run: poetry install
+      - run: poetry run lint --bootstrap
+      - run: poetry run lint
 workflows:
-    example-workflow:
-      jobs:
-        - python/test:
-            pkg-manager: poetry
+  build:
+    jobs:
+      - python/test:
+          pkg-manager: poetry
+      - lint

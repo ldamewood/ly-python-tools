@@ -16,7 +16,6 @@ import logging
 import re
 import subprocess
 import sys
-from collections import UserList
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, ClassVar, Mapping, Pattern, Sequence
@@ -107,17 +106,13 @@ DEFAULT_LINTERS = {
 
 
 @dataclass
-class LintConfiguration(UserList[Linter]):
+class LintConfiguration:
     """Configuration for running all of the linters."""
 
     name: str
+    linters: Sequence[Linter]
     include: Pattern[str]
     _config_file: ClassVar[Path] = Path("pyproject.toml")
-
-    def __init__(self, name: str, linters: Sequence[Linter], include: Pattern[str]):
-        super().__init__(linters)
-        self.name = name
-        self.include = include
 
     @classmethod
     def get_config(cls) -> LintConfiguration:
@@ -169,7 +164,7 @@ def main(bootstrap: bool, files: Sequence[Path]):
         sys.exit(1)
 
     if bootstrap:
-        for linter in config:
+        for linter in config.linters:
             click.echo(f"Bootstrapping {linter.executable} ... ")
             try:
                 ret = linter.bootstrap()
@@ -198,7 +193,7 @@ def main(bootstrap: bool, files: Sequence[Path]):
         for file_ in found_files:
             click.echo(f"- {file_}")
 
-    for linter in config:
+    for linter in config.linters:
         click.echo(f"Running {linter.executable} ...")
         linter.exec(*found_files)
 

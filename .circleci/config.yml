@@ -18,8 +18,12 @@ jobs:
       - python/install-packages:
           pkg-manager: poetry
           args: -E all
-      - run: poetry run lint --bootstrap
-      - run: poetry run lint .
+      - run:
+          name: Bootstrap the linters
+          command: poetry run lint --bootstrap
+      - run:
+          name: Run all of the linters
+          command: poetry run pre-commit run -av
   deploy:
     executor: python/default
     steps:

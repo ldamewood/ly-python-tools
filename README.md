@@ -48,7 +48,7 @@ linter.
 Install the project.
 
 ```
-poetry install -E all -E flake8
+poetry install -E prospector -E flake8
 ```
 
 Bootstrap the linter. This will ensure all of the expected linters are
@@ -90,7 +90,7 @@ Install and use the linters
 
 ```
 # Install all linters
-poetry add --dev ly_python_tools@latest -E all
+poetry add --dev ly_python_tools@latest -E prospector -E flake8
 # Ensure all linters are available
 poetry run lint --bootstrap
 # Run the linters

@@ -19,7 +19,7 @@ jobs:
       - checkout
       - python/install-packages:
           pkg-manager: poetry
-          args: -E all
+          args: -E prospector -E flake8
       - run:
           name: Bootstrap the linters
           command: poetry run lint --bootstrap
@@ -104,6 +104,7 @@ workflows:
       - python/test:
           context: artifactory
           pkg-manager: poetry
+          args: -E prospector -E flake8
           pre-install-steps:
             - setup-artifactory
           matrix:

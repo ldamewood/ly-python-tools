@@ -12,17 +12,21 @@ Lint files with a variety of linters.
 
 from __future__ import annotations
 
+import functools
 import logging
+import os
 import re
 import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, ClassVar, Mapping, Pattern, Sequence
+from typing import Any, Callable, ClassVar, Mapping, Pattern, Sequence
 
 import click
 import toml
+
+from .environ import environ
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +72,22 @@ class Linter:
         return new_linter
 
 
+def pyright_env(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorate a function to set the pyright environment."""
+
+    @functools.wraps(func)
+    def wrap_pyright_env(*args: Any, **kwargs: Any):
+        default_env_dir = (
+            Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "pyright"
+        )
+        env_dir = Path(os.getenv("PYRIGHT_PYTHON_ENV_DIR", default_env_dir)).resolve()
+        with environ(PYRIGHT_PYTHON_ENV_DIR=env_dir.as_posix()):
+            logger.debug(f'PYRIGHT_PYTHON_ENV_DIR is {os.environ["PYRIGHT_PYTHON_ENV_DIR"]}')
+            return func(*args, **kwargs)
+
+    return wrap_pyright_env
+
+
 @dataclass(frozen=True)
 class PyRightLinter(Linter):
     """
@@ -79,6 +99,7 @@ class PyRightLinter(Linter):
 
     _retries: ClassVar[int] = 3
 
+    @pyright_env
     def bootstrap(self) -> str:
         """Ensure the linter is available on the system."""
         ret = super().bootstrap()
@@ -94,8 +115,12 @@ class PyRightLinter(Linter):
                 logger.debug(f"Caught {e!r}: Trying again...")
                 continue
         raise LinterBootstrapFailure(
-            f"Could not install pyright successfully after {self._retries} attempts"
+            f"Could not install pyright successfully after {self._retries} attempts."
         )
+
+    @pyright_env
+    def exec(self, *files: Path):
+        super().exec(*files)
 
 
 DEFAULT_LINTERS = {
@@ -159,9 +184,13 @@ class LinterExitNonZero(Exception):
 
 @click.command()
 @click.option("--bootstrap", is_flag=True, default=False, help="Bootstrap all of the linters")
+@click.option("--verbose", is_flag=True, default=False)
 @click.argument("files", nargs=-1, type=click.Path(path_type=Path))
 @click.version_option()
-def main(bootstrap: bool, files: Sequence[Path]):
+def main(verbose: bool, bootstrap: bool, files: Sequence[Path]):
+    if verbose:
+        logging.basicConfig()
+        logger.setLevel(logging.DEBUG)
     try:
         config = LintConfiguration.get_config()
     except NoProjectFile as e:
@@ -173,9 +202,9 @@ def main(bootstrap: bool, files: Sequence[Path]):
     if bootstrap:
         for linter in config.linters:
             click.echo(f"Bootstrapping {linter.executable} ... ")
-            click.echo(linter.bootstrap())
+            found = linter.bootstrap()
+            logger.debug(f"{linter.executable} is {found}")
         click.echo("Bootstrapping finished successfully.")
-        sys.exit(0)
 
     # Recursively search directories provided on the command line.
     found_files = [
@@ -193,8 +222,13 @@ def main(bootstrap: bool, files: Sequence[Path]):
         for file_ in found_files:
             click.echo(f"- {file_}")
 
-    for linter in config.linters:
+    runnable_linters = [linter for linter in config.linters if linter.run]
+
+    for linter in runnable_linters:
         click.echo(f"Running {linter.executable} ...")
         linter.exec(*found_files)
+
+    if any(linter.mutable for linter in runnable_linters):
+        click.echo("Files may have been modified")
 
     click.echo("Linting ran successfully")

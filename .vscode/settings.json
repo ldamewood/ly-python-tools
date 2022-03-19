@@ -1,39 +1,37 @@
 {
-        "editor.rulers": [
-                100
-        ],
-        "editor.formatOnSave": true,
-        "python.languageServer": "Pylance",
-        "python.analysis.diagnosticMode": "workspace",
-        "python.analysis.typeCheckingMode": "strict",
-        "python.linting.enabled": true,
-        "python.linting.prospectorEnabled": true,
-        "python.formatting.provider": "black",
-        "python.formatting.blackArgs": [
-                "--config",
-                "${workspaceFolder}/pyproject.toml"
-        ],
-        "python.sortImports.path": "isort",
-        "python.sortImports.args": [
-                "--settings-path=${workspaceFolder}"
-        ],
-        "python.testing.pytestEnabled": true,
-        "python.testing.pytestArgs": [
-                "-c",
-                "${workspaceFolder}/pyproject.toml",
-                "--rootdir=${workspaceFolder}",
-        ],
-        "vim.textwidth": 99,
-        "spellright.language": [
-                "en"
-        ],
-        "spellright.documentTypes": [
-                "markdown",
-                "latex"
-        ],
-        "[markdown]": {
-                "editor.rulers": [
-                    80,
-                ]
-            }
+  "editor.rulers": [100],
+  "editor.formatOnSave": true,
+  "python.languageServer": "Pylance",
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.typeCheckingMode": "strict",
+  "python.linting.enabled": true,
+  "python.linting.prospectorEnabled": true,
+  "python.formatting.provider": "black",
+  "python.formatting.blackArgs": [
+    "--config",
+    "${workspaceFolder}/pyproject.toml"
+  ],
+  "python.sortImports.path": "isort",
+  "python.sortImports.args": ["--settings-path=${workspaceFolder}"],
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": [
+    "-c",
+    "${workspaceFolder}/pyproject.toml",
+    "--rootdir=${workspaceFolder}"
+  ],
+  "vim.textwidth": 99,
+  "spellright.language": ["en"],
+  "spellright.documentTypes": ["markdown", "latex"],
+  "[markdown]": {
+    "editor.rulers": [80]
+  },
+  "cSpell.words": [
+    "autoupgrade",
+    "ipynb",
+    "isort",
+    "pycache",
+    "pyright",
+    "pytest",
+    "pyupgrade"
+  ]
 }

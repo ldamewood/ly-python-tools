@@ -33,4 +33,5 @@ repos:
         name: lint
         entry: poetry run lint
         language: system
-        types: [python]
+        require_serial: true
+        types: [python, file]

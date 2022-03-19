@@ -28,14 +28,14 @@ jobs:
           command: python --version --version | cat .pre-commit-config.yaml - > pre-commit-cache-key.txt
       - restore_cache:
           keys:
-            - v1-pc-cache-{{ checksum "pre-commit-cache-key.txt" }}
+            - v1-pre-commit-cache-{{ checksum "pre-commit-cache-key.txt" }}
       - run:
           name: Run all of the linters
           command: poetry run pre-commit run -av
           environment:
             SKIP: no-commit-to-branch
       - save_cache:
-          key: v1-pc-cache-{{ checksum "pre-commit-cache-key.txt" }}
+          key: v1-pre-commit-cache-{{ checksum "pre-commit-cache-key.txt" }}
           paths:
             - ~/.cache/pre-commit
   deploy:

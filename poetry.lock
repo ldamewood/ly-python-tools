@@ -139,6 +139,19 @@ python-versions = "*"
 flake8 = "*"
 
 [[package]]
+name = "flake8-print"
+version = "4.0.0"
+description = "print statement checker plugin for flake8"
+category = "main"
+optional = true
+python-versions = ">=3.6"
+
+[package.dependencies]
+flake8 = ">=3.0"
+pycodestyle = "*"
+six = "*"
+
+[[package]]
 name = "identify"
 version = "2.4.12"
 description = "File identification library for Python"
@@ -526,7 +539,7 @@ yaml = ["pyyaml"]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 
@@ -620,7 +633,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [extras]
 all = ["black", "isort", "pyupgrade", "prospector", "pyright"]
 black = ["black"]
-flake8 = ["flake8"]
+flake8 = ["flake8", "flake8-print"]
 isort = ["isort"]
 prospector = ["prospector"]
 pyright = ["pyright"]
@@ -629,7 +642,7 @@ pyupgrade = ["pyupgrade"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "947d920efafe1af0ee5a4134c6269ae6486d518f0a898e5ca04bb04496bd1d67"
+content-hash = "0141d49d7ae6b49760e9780f9cb57870790e9a63feebb3b8ae6ae8209466ca91"
 
 [metadata.files]
 astroid = [
@@ -700,6 +713,10 @@ flake8 = [
 flake8-polyfill = [
     {file = "flake8-polyfill-1.0.2.tar.gz", hash = "sha256:e44b087597f6da52ec6393a709e7108b2905317d0c0b744cdca6208e670d8eda"},
     {file = "flake8_polyfill-1.0.2-py2.py3-none-any.whl", hash = "sha256:12be6a34ee3ab795b19ca73505e7b55826d5f6ad7230d31b18e106400169b9e9"},
+]
+flake8-print = [
+    {file = "flake8-print-4.0.0.tar.gz", hash = "sha256:5afac374b7dc49aac2c36d04b5eb1d746d72e6f5df75a6ecaecd99e9f79c6516"},
+    {file = "flake8_print-4.0.0-py3-none-any.whl", hash = "sha256:6c0efce658513169f96d7a24cf136c434dc711eb00ebd0a985eb1120103fe584"},
 ]
 identify = [
     {file = "identify-2.4.12-py2.py3-none-any.whl", hash = "sha256:5f06b14366bd1facb88b00540a1de05b69b310cbc2654db3c7e07fa3a4339323"},

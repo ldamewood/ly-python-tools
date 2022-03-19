@@ -12,6 +12,7 @@ Lint files with a variety of linters.
 
 from __future__ import annotations
 
+import functools
 import logging
 import os
 import re
@@ -20,7 +21,7 @@ import subprocess
 import sys
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, ClassVar, Mapping, Pattern, Sequence
+from typing import Any, Callable, ClassVar, Mapping, Pattern, Sequence
 
 import click
 import toml
@@ -71,6 +72,22 @@ class Linter:
         return new_linter
 
 
+def pyright_env(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorate a function to set the pyright environment."""
+
+    @functools.wraps(func)
+    def wrap_pyright_env(*args: Any, **kwargs: Any):
+        default_env_dir = (
+            Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "pyright"
+        )
+        env_dir = Path(os.getenv("PYRIGHT_PYTHON_ENV_DIR", default_env_dir)).resolve()
+        with environ(PYRIGHT_PYTHON_ENV_DIR=env_dir.as_posix()):
+            logger.debug(f'PYRIGHT_PYTHON_ENV_DIR is {os.environ["PYRIGHT_PYTHON_ENV_DIR"]}')
+            return func(*args, **kwargs)
+
+    return wrap_pyright_env
+
+
 @dataclass(frozen=True)
 class PyRightLinter(Linter):
     """
@@ -81,41 +98,29 @@ class PyRightLinter(Linter):
     """
 
     _retries: ClassVar[int] = 3
-    _default_env_dir: ClassVar[Path] = (
-        Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "pyright"
-    )
 
-    @classmethod
-    def _config_dir(cls) -> Path:
-        return Path(os.getenv("PYRIGHT_PYTHON_ENV_DIR", cls._default_env_dir)).resolve()
-
+    @pyright_env
     def bootstrap(self) -> str:
         """Ensure the linter is available on the system."""
         ret = super().bootstrap()
-        config_dir = self._config_dir().as_posix()
-        with environ(PYRIGHT_PYTHON_ENV_DIR=config_dir):
-            logger.debug(f'PYRIGHT_PYTHON_ENV_DIR is {os.environ["PYRIGHT_PYTHON_ENV_DIR"]}')
-            for i in range(self._retries):
-                try:
-                    subprocess.run(
-                        [self._executable.as_posix(), "--version"], check=True, capture_output=True
-                    )
-                    return ret
-                except subprocess.CalledProcessError as e:
-                    if i == self._retries - 1:
-                        raise
-                    logger.debug(f"Caught {e!r}: Trying again...")
-                    continue
-            raise LinterBootstrapFailure(
-                f"Could not install pyright successfully after {self._retries} attempts. "
-                f"Try removing {config_dir}."
-            )
+        for i in range(self._retries):
+            try:
+                subprocess.run(
+                    [self._executable.as_posix(), "--version"], check=True, capture_output=True
+                )
+                return ret
+            except subprocess.CalledProcessError as e:
+                if i == self._retries - 1:
+                    raise
+                logger.debug(f"Caught {e!r}: Trying again...")
+                continue
+        raise LinterBootstrapFailure(
+            f"Could not install pyright successfully after {self._retries} attempts."
+        )
 
+    @pyright_env
     def exec(self, *files: Path):
-        config_dir = self._config_dir().as_posix()
-        with environ(PYRIGHT_PYTHON_ENV_DIR=config_dir):
-            logger.debug(f'PYRIGHT_PYTHON_ENV_DIR is {os.environ["PYRIGHT_PYTHON_ENV_DIR"]}')
-            super().exec(*files)
+        super().exec(*files)
 
 
 DEFAULT_LINTERS = {

@@ -57,7 +57,7 @@ class Linter:
         """Ensure the linter is available on the system."""
         which = shutil.which(self._executable.as_posix())
         if not which:
-            raise LinterNotFound(self._executable.as_posix())
+            raise LinterBootstrapFailure(f"Could not find {self._executable.as_posix()}")
         return which
 
     def update(self, config: Mapping[str, Any]) -> Linter:
@@ -90,10 +90,11 @@ class PyRightLinter(Linter):
             except subprocess.CalledProcessError as e:
                 if i == self._retries - 1:
                     raise
-                print(f"Caught {e!r}: Trying again...")
+                logger.debug(f"Caught {e!r}: Trying again...")
                 continue
-        print("Could not install pyright successfully after 3 attempts.")
-        sys.exit(1)
+        raise LinterBootstrapFailure(
+            f"Could not install pyright successfully after {self._retries} attempts"
+        )
 
 
 DEFAULT_LINTERS = {
@@ -147,8 +148,8 @@ class NoProjectFile(Exception):
         self.search_paths = [path.as_posix() for path in search_paths]
 
 
-class LinterNotFound(Exception):
-    """Linter was not found on the path."""
+class LinterBootstrapFailure(Exception):
+    """Linter failed during bootstrap."""
 
 
 class LinterExitNonZero(Exception):

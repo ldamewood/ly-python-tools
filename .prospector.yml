@@ -1,0 +1,5 @@
+pylint:
+  disable:
+    # Don't warn about f-strings in logging
+    # https://pylint.pycqa.org/en/latest/whatsnew/2.5.html#other-changes
+    - logging-fstring-interpolation

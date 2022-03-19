@@ -36,6 +36,7 @@ class Linter:
     mutable: bool = False
     run: bool = True
     quiet: bool = False
+    pass_filenames: bool = True
     _executable: Path = field(init=False, repr=False)
 
     def __post_init__(self):
@@ -50,7 +51,7 @@ class Linter:
         if not self.run:
             return
         cmd = [self._executable.as_posix()] + list(self.options)
-        cmd += [file.as_posix() for file in files]
+        cmd += [file.as_posix() for file in files if self.pass_filenames]
         subprocess.run(cmd, check=True, capture_output=self.quiet)
 
     def bootstrap(self) -> str:
@@ -102,7 +103,7 @@ DEFAULT_LINTERS = {
     "black": Linter(executable="black", mutable=True),
     "isort": Linter(executable="isort", mutable=True),
     "flake8": Linter(executable="flake8"),
-    "pyright": PyRightLinter(executable="pyright"),
+    "pyright": PyRightLinter(executable="pyright", pass_filenames=False),
     "prospector": Linter(executable="prospector"),
 }
 

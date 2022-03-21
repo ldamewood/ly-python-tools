@@ -1,5 +1,8 @@
+import functools
 import os
 from contextlib import contextmanager
+from pathlib import Path
+from typing import Any, Callable
 
 
 @contextmanager
@@ -17,3 +20,18 @@ def environ(**env: str):
                 del os.environ[key]
             else:
                 os.environ[key] = value
+
+
+def pyright_env(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorate a function to set the pyright environment."""
+
+    @functools.wraps(func)
+    async def wrap_pyright_env(*args: Any, **kwargs: Any):
+        default_env_dir = (
+            Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "pyright"
+        )
+        env_dir = Path(os.getenv("PYRIGHT_PYTHON_ENV_DIR", default_env_dir)).resolve()
+        with environ(PYRIGHT_PYTHON_ENV_DIR=env_dir.as_posix(), PYRIGHT_PYTHON_GLOBAL_NODE="off"):
+            return await func(*args, **kwargs)
+
+    return wrap_pyright_env

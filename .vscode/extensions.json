@@ -1,6 +1,7 @@
 {
         "recommendations": [
                 "aaron-bond.better-comments",
+                "alexkrechik.cucumberautocomplete",
                 "eamodio.gitlens",
                 "editorconfig.editorconfig",
                 "github.vscode-pull-request-github",

@@ -27,6 +27,8 @@ prospector = ["prospector"]
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.1"
 pre-commit = "^2.17.0"
+pytest-cov = "^3.0.0"
+behave = "^1.2.6"
 
 [tool.lint]
 include = '\.py$'
@@ -72,6 +74,16 @@ exclude = ["**/__pycache__",
 pythonVersion = "3.7"
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
+
+[tool.pytest.ini_options]
+minversion = "7.1.0"
+addopts = "-ra -v --cov-report=xml --cov-context=test --cov-branch"
+junit_family = "xunit2"
+junit_suite_name = "ly_python_tools"
+testpaths = [
+        "tests"
+    ]
+xfail_strict=true
 
 [build-system]
 requires = ["poetry-core>=1.0.8"]

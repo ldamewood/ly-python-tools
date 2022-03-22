@@ -1,6 +1,6 @@
 import os
 
-from ly_python_tools.environ import environ
+from ly_python_tools.lint.environ import environ
 
 
 def test_environ():

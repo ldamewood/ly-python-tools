@@ -12,26 +12,25 @@ Lint files with a variety of linters.
 
 from __future__ import annotations
 
-import functools
+import asyncio
 import logging
-import os
 import re
 import shutil
-import subprocess
 import sys
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Mapping, Pattern, Sequence
+from textwrap import indent
+from typing import Any, ClassVar, Iterable, Iterator, Mapping, Pattern, Sequence, TypeVar
 
 import click
 import toml
 
-from .environ import environ
+from .environ import ModifiedPaths, pyright_env, run_proc
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass
 class Linter:
     """A linter that is run from the command line."""
 
@@ -41,12 +40,27 @@ class Linter:
     run: bool = True
     quiet: bool = False
     pass_filenames: bool = True
+    additional_options: Sequence[str] = field(default_factory=list, repr=False)
     _executable: Path = field(init=False, repr=False)
 
     def __post_init__(self):
-        object.__setattr__(self, "_executable", Path(self.executable))
+        self._executable = Path(self.executable)
 
-    def exec(self, *files: Path):
+    async def bootstrap(self) -> LintBootstrapResult:
+        """Ensure the linter is available on the system."""
+        which = shutil.which(self._executable.as_posix())
+        if not which:
+            return LintBootstrapResult(self.executable)
+        proc = await run_proc(which, "--help")
+        return LintBootstrapResult(
+            linter=self.executable,
+            which=Path(which),
+            stdout=(await proc.stdout.read()).decode("utf8") if proc.stdout else None,
+            stderr=(await proc.stderr.read()).decode("utf8") if proc.stderr else None,
+            returncode=proc.returncode,
+        )
+
+    async def exec(self, lock: asyncio.Lock, files: Sequence[Path]) -> LintExecResult | None:
         """
         Run the linter.
 
@@ -54,16 +68,24 @@ class Linter:
         """
         if not self.run:
             return
-        cmd = [self._executable.as_posix()] + list(self.options)
+        cmd = [self._executable.as_posix()] + list(self.additional_options) + list(self.options)
         cmd += [file.as_posix() for file in files if self.pass_filenames]
-        subprocess.run(cmd, check=True, capture_output=self.quiet)
-
-    def bootstrap(self) -> str:
-        """Ensure the linter is available on the system."""
-        which = shutil.which(self._executable.as_posix())
-        if not which:
-            raise LinterBootstrapFailure(f"Could not find {self._executable.as_posix()}")
-        return which
+        async with lock:
+            async with ModifiedPaths(files) as modified_files:
+                proc = await run_proc(*cmd)
+            stdout = (await proc.stdout.read()).decode("utf8") if proc.stdout else None
+            stderr = (await proc.stderr.read()).decode("utf8") if proc.stderr else None
+            modified = list(modified_files)
+            assert (
+                not modified
+            ) or self.mutable, f"{self.executable} was not expected to change files."
+        return LintExecResult(
+            linter=self.executable,
+            stdout=stdout,
+            stderr=stderr,
+            returncode=proc.returncode,
+            modified_files=list(modified_files),
+        )
 
     def update(self, config: Mapping[str, Any]) -> Linter:
         """Update the linter options."""
@@ -72,23 +94,34 @@ class Linter:
         return new_linter
 
 
-def pyright_env(func: Callable[..., Any]) -> Callable[..., Any]:
-    """Decorate a function to set the pyright environment."""
+@dataclass(frozen=True)
+class PrettyResult:
+    linter: str
+    stdout: str | None = None
+    stderr: str | None = None
 
-    @functools.wraps(func)
-    def wrap_pyright_env(*args: Any, **kwargs: Any):
-        default_env_dir = (
-            Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "pyright"
-        )
-        env_dir = Path(os.getenv("PYRIGHT_PYTHON_ENV_DIR", default_env_dir)).resolve()
-        with environ(PYRIGHT_PYTHON_ENV_DIR=env_dir.as_posix()):
-            logger.debug(f'PYRIGHT_PYTHON_ENV_DIR is {os.environ["PYRIGHT_PYTHON_ENV_DIR"]}')
-            return func(*args, **kwargs)
-
-    return wrap_pyright_env
+    def pretty_output(self) -> str:
+        ret: list[str] = []
+        symbols = ["¹", "²"]
+        for symbol, out in zip(symbols, [self.stdout, self.stderr]):
+            if out:
+                ret += [indent(out, f"{self.linter}{symbol}: ", predicate=lambda _: True)]
+        return "\n".join(ret)
 
 
 @dataclass(frozen=True)
+class LintBootstrapResult(PrettyResult):
+    returncode: int | None = None
+    which: Path | None = None
+
+
+@dataclass(frozen=True)
+class LintExecResult(PrettyResult):
+    returncode: int | None = None
+    modified_files: Sequence[Path] = field(default_factory=list)
+
+
+@dataclass
 class PyRightLinter(Linter):
     """
     A linter for pyright.
@@ -100,33 +133,31 @@ class PyRightLinter(Linter):
     _retries: ClassVar[int] = 3
 
     @pyright_env
-    def bootstrap(self) -> str:
+    async def bootstrap(self) -> LintBootstrapResult:
         """Ensure the linter is available on the system."""
-        ret = super().bootstrap()
-        for i in range(self._retries):
-            try:
-                subprocess.run(
-                    [self._executable.as_posix(), "--version"], check=True, capture_output=True
-                )
-                return ret
-            except subprocess.CalledProcessError as e:
-                if i == self._retries - 1:
-                    raise
-                logger.debug(f"Caught {e!r}: Trying again...")
-                continue
-        raise LinterBootstrapFailure(
-            f"Could not install pyright successfully after {self._retries} attempts."
-        )
+        bootstrap = await super().bootstrap()
+        retry = self._retries
+        while retry and bootstrap.returncode:
+            logger.debug(bootstrap.stdout)
+            logger.debug(bootstrap.stderr)
+            logger.debug("Error: Trying again...")
+            bootstrap = await super().bootstrap()
+            retry -= 1
+        return bootstrap
 
     @pyright_env
-    def exec(self, *files: Path):
-        super().exec(*files)
+    async def exec(self, lock: asyncio.Lock, files: Sequence[Path]) -> LintExecResult | None:
+        return await super().exec(lock=lock, files=files)
 
 
 DEFAULT_LINTERS = {
-    "pyupgrade": Linter(executable="pyupgrade"),
-    "black": Linter(executable="black", mutable=True),
-    "isort": Linter(executable="isort", mutable=True),
+    "pyupgrade": Linter(
+        executable="pyupgrade",
+        mutable=True,
+        additional_options=["--py37-plus", "--exit-zero-even-if-changed"],
+    ),
+    "black": Linter(executable="black", mutable=True, additional_options=["-t", "py37"]),
+    "isort": Linter(executable="isort", mutable=True, additional_options=["--py", "37"]),
     "flake8": Linter(executable="flake8"),
     "pyright": PyRightLinter(executable="pyright", pass_filenames=False),
     "prospector": Linter(executable="prospector"),
@@ -174,38 +205,44 @@ class NoProjectFile(Exception):
         self.search_paths = [path.as_posix() for path in search_paths]
 
 
-class LinterBootstrapFailure(Exception):
-    """Linter failed during bootstrap."""
+class LinterMultipleExceptions(Exception):
+    """Multiple exceptions."""
 
 
-class LinterExitNonZero(Exception):
-    """Linter exited with non-zero status."""
+async def _bootstrap_linters(
+    config: LintConfiguration,
+) -> Sequence[LintBootstrapResult | Exception | None]:
+    async def _bootstrap_linter(linter: Linter) -> LintBootstrapResult | None:
+        if not linter.run:
+            return
+        click.echo(f"Bootstrapping {linter.executable} ... ")
+        return await linter.bootstrap()
+
+    return await asyncio.gather(
+        *[_bootstrap_linter(linter) for linter in config.linters], return_exceptions=True
+    )
 
 
-@click.command()
-@click.option("--bootstrap", is_flag=True, default=False, help="Bootstrap all of the linters")
-@click.option("--verbose", is_flag=True, default=False)
-@click.argument("files", nargs=-1, type=click.Path(path_type=Path))
-@click.version_option()
-def main(verbose: bool, bootstrap: bool, files: Sequence[Path]):
-    if verbose:
-        logging.basicConfig()
-        logger.setLevel(logging.DEBUG)
-    try:
-        config = LintConfiguration.get_config()
-    except NoProjectFile as e:
-        click.echo(
-            f'No "{e.proj_filename}" file could be located in the search paths: {e.search_paths!s}'
-        )
-        sys.exit(1)
+async def _exec_linter(
+    linter: Linter, files: Sequence[Path], lock: asyncio.Lock
+) -> LintExecResult | None:
+    if not linter.run:
+        return
+    click.echo(f"Running {linter.executable} ...")
+    return await linter.exec(lock=lock, files=files)
 
-    if bootstrap:
-        for linter in config.linters:
-            click.echo(f"Bootstrapping {linter.executable} ... ")
-            found = linter.bootstrap()
-            logger.debug(f"{linter.executable} is {found}")
-        click.echo("Bootstrapping finished successfully.")
 
+async def _exec_linters(
+    linters: Sequence[Linter], files: Sequence[Path]
+) -> Sequence[LintExecResult | Exception | None]:
+
+    lock = asyncio.Lock()
+    return await asyncio.gather(
+        *[_exec_linter(linter, files, lock=lock) for linter in linters], return_exceptions=True
+    )
+
+
+def _resolve_files(config: LintConfiguration, *files: Path) -> Sequence[Path]:
     # Recursively search directories provided on the command line.
     found_files = [
         file_
@@ -222,13 +259,74 @@ def main(verbose: bool, bootstrap: bool, files: Sequence[Path]):
         for file_ in found_files:
             click.echo(f"- {file_}")
 
-    runnable_linters = [linter for linter in config.linters if linter.run]
+    return found_files
 
-    for linter in runnable_linters:
-        click.echo(f"Running {linter.executable} ...")
-        linter.exec(*found_files)
 
-    if any(linter.mutable for linter in runnable_linters):
-        click.echo("Files may have been modified")
+@click.command()
+@click.option("--bootstrap", is_flag=True, default=False, help="Bootstrap all of the linters")
+@click.option("--verbose", is_flag=True, default=False)
+@click.argument("files", nargs=-1, type=click.Path(path_type=Path))
+@click.version_option()
+def main(verbose: bool, bootstrap: bool, files: Sequence[Path]):
+    if verbose:
+        logging.basicConfig()
+        logger.setLevel(logging.DEBUG)
 
+    try:
+        config = LintConfiguration.get_config()
+    except NoProjectFile as e:
+        click.echo(
+            f'"{e.proj_filename}" could not be located in the search paths: {e.search_paths!s}'
+        )
+        sys.exit(1)
+
+    if bootstrap:
+        _exit = 0
+        for ret in iter_returns(asyncio.run(_bootstrap_linters(config), debug=True)):
+            if ret.returncode:
+                click.echo(f"{ret.linter} is broken and exited {ret.returncode}")
+                click.echo(ret.pretty_output())
+                _exit = 1
+            if ret.which is None:
+                click.echo(f"{ret.linter} is missing")
+                click.echo(ret.pretty_output())
+                _exit = 1
+        if _exit:
+            click.echo("Linting bootstrap failed.")
+            sys.exit(1)
+        click.echo("Bootstrapping finished successfully.")
+
+    found_files = _resolve_files(config, *files)
+
+    _exit = 0
+    for ret in iter_returns(asyncio.run(_exec_linters(config.linters, found_files), debug=True)):
+        if ret.modified_files:
+            click.echo(f"{ret.linter} found errors and modified files:")
+            for modified_path in ret.modified_files:
+                click.echo(f"- {ret.linter} modified {modified_path}")
+            _exit = 1
+        if ret.returncode:
+            click.echo(f"{ret.linter} found errors and exited {ret.returncode}")
+            click.echo(ret.pretty_output())
+            _exit = 1
+    if _exit:
+        click.echo("Linting failed.")
+        sys.exit(1)
     click.echo("Linting ran successfully")
+
+
+ReturnType = TypeVar("ReturnType")
+
+
+def iter_returns(items: Iterable[ReturnType | Exception | None]) -> Iterator[ReturnType]:
+    exceptions: list[Exception] = []
+    for item in iter(items):
+        if item is None:
+            continue
+        if isinstance(item, Exception):
+            logger.error(item)
+            exceptions.append(item)
+            continue
+        yield item
+    if exceptions:
+        raise LinterMultipleExceptions(exceptions)

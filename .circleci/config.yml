@@ -38,6 +38,17 @@ jobs:
           key: v1-pre-commit-cache-{{ checksum "pre-commit-cache-key.txt" }}
           paths:
             - ~/.cache/pre-commit
+  behave:
+    executor: python/default
+    steps:
+      - setup-artifactory
+      - checkout
+      - python/install-packages:
+          pkg-manager: poetry
+          args: -E prospector -E flake8
+      - run:
+          name: behave tests
+          command: poetry run behave
   deploy:
     executor: python/default
     steps:
@@ -110,6 +121,8 @@ workflows:
           matrix:
             parameters:
               version: ["3.7", "3.8", "3.9", "3.10"]
+      - behave:
+          context: artifactory
       - lint:
           context: artifactory
       - deploy:

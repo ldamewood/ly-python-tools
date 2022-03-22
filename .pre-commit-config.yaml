@@ -6,7 +6,7 @@ repos:
         args: ["--branch", "main"]
       - id: trailing-whitespace
       - id: end-of-file-fixer
-        exclude: ^.circleci/config.yml$
+        exclude: ^.circleci/config.yml|^features/steps/data/.*$
       - id: debug-statements
       - id: check-added-large-files
       - id: check-ast
@@ -26,6 +26,7 @@ repos:
     rev: v0.1.0
     hooks:
       - id: lint
+        exclude: ^features/steps/data/
   - repo: local
     hooks:
       - id: circleci-validate

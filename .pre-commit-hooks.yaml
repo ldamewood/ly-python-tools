@@ -3,6 +3,6 @@
   description: Run a number of python linters
   entry: lint
   args: ["--bootstrap"]
-  language: system
+  language: python
   types: [python]
   require_serial: true

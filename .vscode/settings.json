@@ -25,6 +25,9 @@
   "[markdown]": {
     "editor.rulers": [80]
   },
+  "files.associations": {
+    "**/features/steps/data/src/*.py": "plaintext"
+  },
   "cSpell.words": [
     "autoupgrade",
     "ipynb",

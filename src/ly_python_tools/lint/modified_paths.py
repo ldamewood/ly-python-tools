@@ -59,4 +59,7 @@ class _PathModified:
 
     def modified(self) -> bool:
         """Return if the file has been modified since initialization."""
-        return self._current_mtime() != self._mtime or self._current_hash() != self._hash
+        if self._current_mtime() != self._mtime:
+            # Only check the hash if the modification time has changed.
+            return self._current_hash() != self._hash
+        return False

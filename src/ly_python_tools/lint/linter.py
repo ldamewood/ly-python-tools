@@ -57,6 +57,7 @@ class Linter:
         cmd = [self._executable.as_posix()] + list(self.additional_options) + list(self.options)
         cmd += [file.as_posix() for file in files if self.pass_filenames]
         async with lock:
+            # Looking for modified files means we need to lock the process.
             async with ModifiedPaths(files) as modified_files:
                 proc = await run_proc(*cmd)
             stdout = (await proc.stdout.read()).decode("utf8") if proc.stdout else None
@@ -70,7 +71,7 @@ class Linter:
             stdout=stdout,
             stderr=stderr,
             returncode=proc.returncode,
-            modified_files=list(modified_files),
+            modified_files=modified,
         )
 
     def update(self, config: Mapping[str, Any]) -> Linter:

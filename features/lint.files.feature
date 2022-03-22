@@ -30,7 +30,7 @@ Feature: Lint python files
         Given a new python project
         And the example file "src/fails_<linter>.py"
         When I run lint with "src"
-        Then the exit code is <trigger_exitcode>
+        Then the exit code is 1
         And the output contains "- src/fails_<linter>.py"
         And the output contains "<linter> found errors"
 
@@ -48,7 +48,7 @@ Feature: Lint python files
         Given a new python project
         And the example file "src/fails_<linter>.py"
         When I run lint with "src"
-        Then the exit code is <trigger_exitcode>
+        Then the exit code is 1
         Then the output contains "- src/fails_<linter>.py"
         And the file "src/fails_<linter>.py" has <changes>
 
@@ -73,7 +73,7 @@ Feature: Lint python files
         And the output contains "pyright found errors"
         And the file "src/fails_multiple.py" has changed
 
-    Scenario: Linter can fail for multiple reasons across many file
+    Scenario: Linter can fail for multiple reasons across many files
         Given a new python project
         And the example file "src/fails_black.py"
         And the example file "src/fails_flake8.py"
@@ -89,9 +89,12 @@ Feature: Lint python files
         And the output contains "- src/fails_prospector.py"
         And the output contains "- src/fails_pyright.py"
         And the output contains "- src/fails_pyupgrade.py"
+        And the output contains "black found errors"
         And the output contains "flake8 found errors"
+        And the output contains "isort found errors"
         And the output contains "prospector found errors"
         And the output contains "pyright found errors"
+        And the output contains "pyupgrade found errors"
         And the file "src/fails_black.py" has changed
         And the file "src/fails_isort.py" has changed
         And the file "src/fails_pyupgrade.py" has changed

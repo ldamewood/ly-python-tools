@@ -93,10 +93,17 @@ jobs:
               fi
             else
               # Not a tag and the version was not set in a previous job.
-              # Get the x.y.z part of the semver from the repo and drop everything else.
+              #
+              # Set the pre-release segment according to PEP-440
+              # https://peps.python.org/pep-0440/
+              # scratch  => "X.Y.Z.dev{CIRCLE_BUILD_NUM}+{COMMIT_HASH}"
+              # snapshot => "X.Y.Za{CIRCLE_BUILD_NUM}+{COMMIT_HASH}"
+              PRE=".dev"
+              if [[ "${CIRCLE_BRANCH}" == main ]]; then PRE="a"; fi
+              # Get the x.y.z part of the version from the repo and drop everything else.
               short_semver=$(poetry version -s | sed 's/^\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\)\.\(0\|[1-9]\d*\).*/\1.\2.\3/g')
-              # Construct the version using CircleCI information
-              ARTIFACTORY_VERSION="${short_semver}+${CIRCLE_BUILD_NUM}.${CIRCLE_SHA1:0:7}"
+              # Construct the PEP-440 compatible version using CircleCI information
+              ARTIFACTORY_VERSION="${short_semver}${PRE}${CIRCLE_BUILD_NUM}+${CIRCLE_SHA1:0:7}"
             fi
             poetry version "${ARTIFACTORY_VERSION}"
       - python/install-packages:

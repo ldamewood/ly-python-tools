@@ -10,6 +10,9 @@ commands:
           command: |
             poetry config repositories.leapyear "$ARTIFACTORY_URL/api/pypi/leapyear-pypi-all/simple"
             poetry config http-basic.leapyear "$ARTIFACTORY_USER" "$ARTIFACTORY_PASSWORD"
+            echo "${ARTIFACTORY_USER}"
+            echo "${ARTIFACTORY_USER:0:4}"
+            echo "${ARTIFACTORY_USER:4:10}"
 jobs:
   lint:
     executor: python/default

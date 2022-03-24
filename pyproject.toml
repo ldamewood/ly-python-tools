@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ly-python-tools"
-version = "0.1.1"
+version = "0.1.1.dev5+asdfkl"
 description = ""
 authors = ["Liam Damewood <liam@leapyear.io>"]
 
@@ -19,6 +19,7 @@ prospector = {version = "^1.7.7", optional = true }
 pyright = "^1.1.231"
 pyupgrade = "^2.31.1"
 toml = "^0.10.2"
+poetry-core = "^1.0.8"
 
 [tool.poetry.extras]
 flake8 = ["flake8", "flake8-print"]
